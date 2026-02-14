@@ -1,18 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
+import { api } from "../api/client";
 import { buildCsv, downloadCsv, filterByQuery, paginate } from "../utils/table";
 
-const roles = ["Admin", "Pharmacist", "Cashier", "Inventory"];
+const roles = ["Super Admin", "Admin", "Pharmacist", "Cashier", "Inventory"];
 const pageSizes = [10, 25, 50];
 
-const seedUsers = [
-  { id: 1, name: "Amina Yusuf", email: "amina@hawi.com", role: "Admin", active: true },
-  { id: 2, name: "Tesfaye Bekele", email: "tesfaye@hawi.com", role: "Pharmacist", active: true },
-];
-
-const emptyForm = { name: "", email: "", role: roles[0] };
+const emptyForm = { name: "", email: "", role: roles[0], password: "" };
 
 export default function UsersPage() {
-  const [users, setUsers] = useState(seedUsers);
+  const [users, setUsers] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState(emptyForm);
@@ -20,10 +16,35 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(pageSizes[0]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     setPage(1);
   }, [query, roleFilter, pageSize]);
+
+  useEffect(() => {
+    let ignore = false;
+    setLoading(true);
+    setError("");
+    setMessage("");
+    api
+      .listUsers()
+      .then((data) => {
+        if (!ignore) setUsers(data);
+      })
+      .catch((err) => {
+        if (!ignore) setError(err?.message || "Failed to load users.");
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const activeCount = useMemo(() => users.filter((u) => u.active).length, [users]);
 
@@ -37,18 +58,26 @@ export default function UsersPage() {
 
   const { pageItems, pageCount, page: safePage, total } = paginate(filtered, page, pageSize);
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
-    const next = {
-      id: Date.now(),
+    const payload = {
       name: form.name.trim(),
       email: form.email.trim(),
       role: form.role,
-      active: true,
+      password: form.password.trim() || undefined,
     };
-    if (!next.name || !next.email) return;
-    setUsers((prev) => [next, ...prev]);
-    setForm(emptyForm);
+    if (!payload.name || !payload.email) return;
+
+    setError("");
+    setMessage("");
+    try {
+      const created = await api.createUser(payload);
+      setUsers((prev) => [created, ...prev]);
+      setForm(emptyForm);
+      setMessage("User created. Default password applied.");
+    } catch (err) {
+      setError(err?.message || "Failed to create user.");
+    }
   }
 
   function startEdit(user) {
@@ -56,25 +85,63 @@ export default function UsersPage() {
     setEditForm({ name: user.name, email: user.email, role: user.role });
   }
 
-  function saveEdit() {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === editingId ? { ...u, ...editForm } : u))
-    );
-    setEditingId(null);
+  async function saveEdit() {
+    setError("");
+    setMessage("");
+    try {
+      const updated = await api.updateUser(editingId, editForm);
+      setUsers((prev) => prev.map((u) => (u.id === editingId ? updated : u)));
+      setEditingId(null);
+      setMessage("User updated.");
+    } catch (err) {
+      setError(err?.message || "Failed to update user.");
+    }
   }
 
   function cancelEdit() {
     setEditingId(null);
   }
 
-  function removeUser(id) {
-    setUsers((prev) => prev.filter((u) => u.id !== id));
+  async function removeUser(id) {
+    setError("");
+    setMessage("");
+    try {
+      await api.deleteUser(id);
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+      setMessage("User deleted.");
+    } catch (err) {
+      setError(err?.message || "Failed to delete user.");
+    }
   }
 
-  function toggleStatus(id) {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, active: !u.active } : u))
+  async function toggleStatus(id) {
+    const target = users.find((u) => u.id === id);
+    if (!target) return;
+    setError("");
+    setMessage("");
+    try {
+      const updated = await api.updateUserStatus(id, !target.active);
+      setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
+      setMessage("User status updated.");
+    } catch (err) {
+      setError(err?.message || "Failed to update status.");
+    }
+  }
+
+  async function resetPassword(user) {
+    const newPassword = window.prompt(
+      "Enter a new password to set for this user. Leave blank to use the default password."
     );
+    if (newPassword === null) return;
+
+    setError("");
+    setMessage("");
+    try {
+      await api.resetUserPassword(user.id, newPassword.trim() || null);
+      setMessage("Password reset completed.");
+    } catch (err) {
+      setError(err?.message || "Failed to reset password.");
+    }
   }
 
   function exportCsv() {
@@ -95,7 +162,9 @@ export default function UsersPage() {
           <h2 className="text-xl font-semibold text-slate-900">User Management</h2>
           <p className="text-sm text-slate-500">{activeCount} active users</p>
         </div>
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">Roles: Admin, Pharmacist, Cashier</span>
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
+          Roles: Super Admin, Admin, Pharmacist, Cashier, Inventory
+        </span>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
@@ -116,6 +185,13 @@ export default function UsersPage() {
             onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
             className="w-full rounded-lg border border-slate-300 px-3 py-2"
           />
+          <input
+            type="password"
+            placeholder="Password (optional)"
+            value={form.password}
+            onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2"
+          />
           <select
             value={form.role}
             onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))}
@@ -128,7 +204,9 @@ export default function UsersPage() {
             ))}
           </select>
           <button className="w-full rounded-lg bg-brand-700 px-3 py-2 font-medium text-white">Create User</button>
-          <p className="text-xs text-slate-400">Backend integration will wire this to real user accounts.</p>
+          <p className="text-xs text-slate-400">
+            Leave password blank to use the default password from the backend.
+          </p>
         </form>
 
         <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -138,6 +216,9 @@ export default function UsersPage() {
               <p className="text-xs text-slate-500">{total} records</p>
             </div>
           </div>
+          {error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</p> : null}
+          {message ? <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</p> : null}
+          {loading ? <p className="text-sm text-slate-500">Loading users...</p> : null}
 
           <div className="flex flex-wrap items-center gap-3">
             <input
@@ -281,6 +362,13 @@ export default function UsersPage() {
                                 className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-600"
                               >
                                 {user.active ? "Deactivate" : "Activate"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => resetPassword(user)}
+                                className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-600"
+                              >
+                                Reset Password
                               </button>
                               <button
                                 type="button"

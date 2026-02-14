@@ -30,3 +30,7 @@ class UserUpdate(BaseModel):
 
 class UserStatusUpdate(BaseModel):
     active: bool
+
+
+class UserPasswordReset(BaseModel):
+    new_password: str | None = Field(default=None, min_length=6)

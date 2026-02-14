@@ -1,16 +1,20 @@
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { useState } from "react";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
 const navItems = [
-  { label: "Dashboard", to: "/dashboard" },
-  { label: "Medicines", to: "/medicines" },
-  { label: "Suppliers", to: "/suppliers" },
-  { label: "Sales", to: "/sales" },
-  { label: "Users", to: "/users" },
+  { label: "Dashboard", to: "/dashboard", roles: ["Super Admin", "Admin", "Pharmacist", "Inventory", "Cashier"] },
+  { label: "Medicines", to: "/medicines", roles: ["Super Admin", "Admin", "Pharmacist", "Inventory", "Cashier"] },
+  { label: "Suppliers", to: "/suppliers", roles: ["Super Admin", "Admin", "Pharmacist", "Inventory", "Cashier"] },
+  { label: "Sales", to: "/sales", roles: ["Super Admin", "Admin", "Pharmacist", "Cashier"] },
+  { label: "Users", to: "/users", roles: ["Super Admin"] },
 ];
 
 function getActiveLabel(pathname) {
   const normalized = pathname === "/" ? "/dashboard" : pathname;
+  if (normalized.startsWith("/settings")) {
+    return "Settings";
+  }
   const match = navItems.find((item) => normalized.startsWith(item.to));
   return match?.label || "Overview";
 }
@@ -19,6 +23,11 @@ export default function AppLayout() {
   const location = useLocation();
   const activeLabel = getActiveLabel(location.pathname);
   const { user, logout } = useAuth();
+  const allowedNavItems = navItems.filter((item) => {
+    if (!item.roles) return true;
+    return item.roles.includes(user?.role || "");
+  });
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-brand-50 to-slate-100">
@@ -30,7 +39,7 @@ export default function AppLayout() {
             <p className="mt-1 text-xs text-slate-500">Operational overview</p>
           </div>
           <nav className="flex-1 space-y-1 px-4 py-5">
-            {navItems.map((item) => (
+            {allowedNavItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -64,17 +73,43 @@ export default function AppLayout() {
                   <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Signed in</p>
                   <p className="text-sm font-medium text-slate-700">{user?.name || "User"}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={logout}
-                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100"
-                >
-                  Log out
-                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setMenuOpen((prev) => !prev)}
+                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  >
+                    Profile
+                  </button>
+                  {menuOpen ? (
+                    <div className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                      <div className="border-b border-slate-100 px-3 py-2 text-xs text-slate-500">
+                        {user?.role || "User"}
+                      </div>
+                      <Link
+                        to="/settings"
+                        onClick={() => setMenuOpen(false)}
+                        className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                      >
+                        Settings
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          logout();
+                        }}
+                        className="block w-full px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
+                      >
+                        Log out
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
             <nav className="flex gap-2 overflow-x-auto border-t border-slate-200 px-4 py-3 md:hidden">
-              {navItems.map((item) => (
+              {allowedNavItems.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}

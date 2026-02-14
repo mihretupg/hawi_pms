@@ -3,9 +3,10 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import verify_password
+from app.core.rbac import get_current_user
+from app.core.security import hash_password, verify_password
 from app.models.user import User
-from app.schemas.auth import LoginRequest
+from app.schemas.auth import ChangePasswordRequest, LoginRequest
 from app.schemas.user import UserRead
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -27,3 +28,17 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
     return user
+
+
+@router.post("/change-password")
+def change_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    current_user.password_hash = hash_password(payload.new_password)
+    db.commit()
+    return {"message": "Password updated"}

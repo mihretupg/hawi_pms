@@ -1,19 +1,29 @@
-﻿from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.rbac import require_roles
 from app.models.supplier import Supplier
 from app.schemas.supplier import SupplierCreate, SupplierRead
 
 router = APIRouter(prefix="/suppliers", tags=["suppliers"])
 
 
-@router.get("", response_model=list[SupplierRead])
+@router.get(
+    "",
+    response_model=list[SupplierRead],
+    dependencies=[Depends(require_roles(["Admin", "Pharmacist", "Inventory", "Cashier"]))],
+)
 def list_suppliers(db: Session = Depends(get_db)):
     return db.query(Supplier).order_by(Supplier.name.asc()).all()
 
 
-@router.post("", response_model=SupplierRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=SupplierRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles(["Admin", "Pharmacist", "Inventory"]))],
+)
 def create_supplier(payload: SupplierCreate, db: Session = Depends(get_db)):
     exists = db.query(Supplier).filter(Supplier.name == payload.name).first()
     if exists:

@@ -7,7 +7,9 @@ const STORAGE_KEY = "hawi_pms_auth";
 function readStoredUser() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (!parsed || typeof parsed.id !== "number") return null;
+    return parsed;
   } catch {
     return null;
   }
