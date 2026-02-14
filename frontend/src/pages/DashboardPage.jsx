@@ -1,16 +1,44 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import StatCard from "../components/StatCard";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  async function load() {
+    try {
+      setLoading(true);
+      const data = await api.getStats();
+      setStats(data);
+      setError("");
+    } catch (err) {
+      console.error(err);
+      setError(err?.message || "Failed to load dashboard stats");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    api.getStats().then(setStats).catch(console.error);
+    load();
   }, []);
 
-  if (!stats) {
+  if (loading) {
     return <p className="text-slate-500">Loading dashboard...</p>;
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700">
+        <p className="font-semibold">Dashboard unavailable</p>
+        <p className="mt-1 text-sm">{error}</p>
+        <button onClick={load} className="mt-4 rounded-lg bg-rose-600 px-4 py-2 text-sm text-white">
+          Retry
+        </button>
+      </div>
+    );
   }
 
   return (

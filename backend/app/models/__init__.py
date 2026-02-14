@@ -3,5 +3,6 @@ from app.models.medicine import Medicine
 from app.models.supplier import Supplier
 from app.models.sale import Sale
 from app.models.sale_item import SaleItem
+from app.models.user import User
 
-__all__ = ["Base", "Medicine", "Supplier", "Sale", "SaleItem"]
+__all__ = ["Base", "Medicine", "Supplier", "Sale", "SaleItem", "User"]

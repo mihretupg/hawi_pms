@@ -1,48 +1,34 @@
-﻿import { useState } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
+import RequireAuth from "./auth/RequireAuth";
+import AppLayout from "./layouts/AppLayout";
 import DashboardPage from "./pages/DashboardPage";
+import LoginPage from "./pages/LoginPage";
 import MedicinesPage from "./pages/MedicinesPage";
-import SuppliersPage from "./pages/SuppliersPage";
+import NotFound from "./pages/NotFound";
 import SalesPage from "./pages/SalesPage";
-
-const tabs = [
-  { key: "dashboard", label: "Dashboard" },
-  { key: "medicines", label: "Medicines" },
-  { key: "suppliers", label: "Suppliers" },
-  { key: "sales", label: "Sales" },
-];
+import SuppliersPage from "./pages/SuppliersPage";
+import UsersPage from "./pages/UsersPage";
 
 export default function App() {
-  const [active, setActive] = useState("dashboard");
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brand-50 to-slate-100 p-4 md:p-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <header className="rounded-2xl bg-brand-900 p-6 text-white shadow-lg">
-          <h1 className="text-2xl font-bold md:text-3xl">Pharmacy Management System</h1>
-          <p className="mt-2 text-sm text-brand-100">React + Tailwind + FastAPI + PostgreSQL</p>
-        </header>
-
-        <nav className="flex flex-wrap gap-2">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActive(tab.key)}
-              className={`rounded-lg px-4 py-2 text-sm font-medium ${
-                active === tab.key ? "bg-brand-700 text-white" : "bg-white text-slate-700"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-
-        <main>
-          {active === "dashboard" && <DashboardPage />}
-          {active === "medicines" && <MedicinesPage />}
-          {active === "suppliers" && <SuppliersPage />}
-          {active === "sales" && <SalesPage />}
-        </main>
-      </div>
-    </div>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/"
+        element={
+          <RequireAuth>
+            <AppLayout />
+          </RequireAuth>
+        }
+      >
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="medicines" element={<MedicinesPage />} />
+        <Route path="suppliers" element={<SuppliersPage />} />
+        <Route path="sales" element={<SalesPage />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="*" element={<NotFound />} />
+      </Route>
+    </Routes>
   );
 }
