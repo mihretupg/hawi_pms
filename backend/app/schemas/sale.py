@@ -1,0 +1,33 @@
+﻿from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class SaleItemCreate(BaseModel):
+    medicine_id: int
+    quantity: int = Field(gt=0)
+
+
+class SaleItemRead(BaseModel):
+    id: int
+    medicine_id: int
+    quantity: int
+    unit_price: float
+    line_total: float
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SaleCreate(BaseModel):
+    customer_name: str | None = None
+    items: list[SaleItemCreate]
+
+
+class SaleRead(BaseModel):
+    id: int
+    sold_at: datetime
+    customer_name: str | None
+    total_amount: float
+    items: list[SaleItemRead]
+
+    model_config = ConfigDict(from_attributes=True)
