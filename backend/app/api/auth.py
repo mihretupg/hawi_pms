@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import verify_password
 from app.models.user import User
-from app.schemas.auth import LoginRequest, UserRead
+from app.schemas.auth import LoginRequest
+from app.schemas.user import UserRead
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
