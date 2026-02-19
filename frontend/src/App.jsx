@@ -6,6 +6,7 @@ import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
 import MedicinesPage from "./pages/MedicinesPage";
 import NotFound from "./pages/NotFound";
+import PurchasesPage from "./pages/PurchasesPage";
 import SalesPage from "./pages/SalesPage";
 import SettingsPage from "./pages/SettingsPage";
 import SuppliersPage from "./pages/SuppliersPage";
@@ -46,6 +47,14 @@ export default function App() {
           element={
             <RequireRole roles={["Super Admin", "Admin", "Pharmacist", "Inventory", "Cashier"]}>
               <SuppliersPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="purchases"
+          element={
+            <RequireRole roles={["Super Admin", "Admin", "Pharmacist", "Inventory"]}>
+              <PurchasesPage />
             </RequireRole>
           }
         />

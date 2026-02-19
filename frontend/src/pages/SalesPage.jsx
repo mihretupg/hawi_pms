@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
+import { formatEtbPlain } from "../utils/format";
 import { buildCsv, downloadCsv, filterByQuery, paginate } from "../utils/table";
 
 const pageSizes = [10, 25, 50];
@@ -72,7 +73,7 @@ export default function SalesPage() {
     const columns = [
       { header: "Sale ID", accessor: "id" },
       { header: "Customer", accessor: "customer_name" },
-      { header: "Total", accessor: "total_amount" },
+      { header: "Total", accessor: (row) => formatEtbPlain(row.total_amount) },
       { header: "Sold At", accessor: "sold_at" },
     ];
     const csv = buildCsv(filtered, columns);
@@ -154,7 +155,7 @@ export default function SalesPage() {
               <tr>
                 <th className="px-3 py-2">Sale ID</th>
                 <th className="px-3 py-2">Customer</th>
-                <th className="px-3 py-2">Total</th>
+                <th className="px-3 py-2">Total (ETB)</th>
                 <th className="px-3 py-2">Sold At</th>
               </tr>
             </thead>
@@ -170,7 +171,7 @@ export default function SalesPage() {
                   <tr key={sale.id} className="border-t">
                     <td className="px-3 py-2 font-medium text-slate-800">#{sale.id}</td>
                     <td className="px-3 py-2 text-slate-600">{sale.customer_name || "Walk-in customer"}</td>
-                    <td className="px-3 py-2 text-slate-600">${sale.total_amount.toFixed(2)}</td>
+                    <td className="px-3 py-2 text-slate-600">{formatEtbPlain(sale.total_amount)}</td>
                     <td className="px-3 py-2 text-slate-500">{new Date(sale.sold_at).toLocaleString()}</td>
                   </tr>
                 ))

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
+import { formatEtb } from "../utils/format";
 import { buildCsv, downloadCsv, filterByQuery, paginate } from "../utils/table";
 
 const initialForm = {
@@ -97,7 +98,7 @@ export default function MedicinesPage() {
       { header: "Generic", accessor: "generic_name" },
       { header: "Batch", accessor: "batch_number" },
       { header: "Expiry", accessor: "expiry_date" },
-      { header: "Unit Price", accessor: "unit_price" },
+      { header: "Unit Price", accessor: (row) => formatEtb(row.unit_price) },
       { header: "Stock", accessor: "stock_qty" },
       { header: "Supplier", accessor: (row) => supplierMap.get(String(row.supplier_id)) || "" },
     ];
@@ -164,7 +165,7 @@ export default function MedicinesPage() {
         <input className="rounded border px-3 py-2" placeholder="Generic name" value={form.generic_name} onChange={(e) => setForm({ ...form, generic_name: e.target.value })} />
         <input className="rounded border px-3 py-2" placeholder="Batch" value={form.batch_number} onChange={(e) => setForm({ ...form, batch_number: e.target.value })} required />
         <input className="rounded border px-3 py-2" type="date" value={form.expiry_date} onChange={(e) => setForm({ ...form, expiry_date: e.target.value })} required />
-        <input className="rounded border px-3 py-2" type="number" min="0.01" step="0.01" placeholder="Unit price" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} required />
+        <input className="rounded border px-3 py-2" type="number" min="0.01" step="0.01" placeholder="Unit price (ETB)" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} required />
         <input className="rounded border px-3 py-2" type="number" min="0" placeholder="Stock qty" value={form.stock_qty} onChange={(e) => setForm({ ...form, stock_qty: e.target.value })} required />
         <select className="rounded border px-3 py-2" value={form.supplier_id} onChange={(e) => setForm({ ...form, supplier_id: e.target.value })}>
           <option value="">Supplier (optional)</option>
@@ -184,7 +185,7 @@ export default function MedicinesPage() {
               <th className="p-3">Name</th>
               <th className="p-3">Batch</th>
               <th className="p-3">Expiry</th>
-              <th className="p-3">Price</th>
+              <th className="p-3">Price (ETB)</th>
               <th className="p-3">Stock</th>
               <th className="p-3">Action</th>
             </tr>
@@ -202,7 +203,7 @@ export default function MedicinesPage() {
                   <td className="p-3">{medicine.name}</td>
                   <td className="p-3">{medicine.batch_number}</td>
                   <td className="p-3">{medicine.expiry_date}</td>
-                  <td className="p-3">${medicine.unit_price}</td>
+                  <td className="p-3">{formatEtb(medicine.unit_price)}</td>
                   <td className="p-3">{medicine.stock_qty}</td>
                   <td className="p-3">
                     <button
