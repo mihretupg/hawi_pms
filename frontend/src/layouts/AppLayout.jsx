@@ -9,6 +9,7 @@ const navItems = [
   { label: "Purchases", to: "/purchases", roles: ["Super Admin", "Admin", "Pharmacist", "Inventory"] },
   { label: "Suppliers", to: "/suppliers", roles: ["Super Admin", "Admin", "Pharmacist", "Inventory", "Cashier"] },
   { label: "Sales", to: "/sales", roles: ["Super Admin", "Admin", "Pharmacist", "Cashier"] },
+  { label: "Reports", to: "/reports", roles: ["Super Admin", "Admin", "Pharmacist", "Cashier"] },
   { label: "Users", to: "/users", roles: ["Super Admin"] },
 ];
 
