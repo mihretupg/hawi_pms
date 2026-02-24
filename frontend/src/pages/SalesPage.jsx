@@ -9,6 +9,7 @@ const pageSizes = [10, 25, 50];
 export default function SalesPage() {
   const [medicines, setMedicines] = useState([]);
   const [sales, setSales] = useState([]);
+  const [lastCommittedSale, setLastCommittedSale] = useState(null);
   const [customerName, setCustomerName] = useState("");
   const [medicineId, setMedicineId] = useState("");
   const [quantity, setQuantity] = useState(1);
@@ -41,6 +42,26 @@ export default function SalesPage() {
     setPage(1);
   }, [query, pageSize]);
 
+  const medicineById = useMemo(
+    () => new Map(medicines.map((medicine) => [medicine.id, medicine.name])),
+    [medicines]
+  );
+
+  function getSaleItemsText(sale) {
+    const items = sale?.items || [];
+    if (!items.length) return "-";
+    return items
+      .map((item) => `${medicineById.get(item.medicine_id) || `#${item.medicine_id}`} x${item.quantity}`)
+      .join(", ");
+  }
+
+  function printSaleReceipt(sale) {
+    const receiptResult = openSaleReceiptPrint(sale, medicineById);
+    if (!receiptResult.ok) {
+      setError(receiptResult.message);
+    }
+  }
+
   async function onSubmit(e) {
     e.preventDefault();
     try {
@@ -48,11 +69,7 @@ export default function SalesPage() {
         customer_name: customerName || null,
         items: [{ medicine_id: Number(medicineId), quantity: Number(quantity) }],
       });
-      const medicineById = new Map(medicines.map((medicine) => [medicine.id, medicine.name]));
-      const receiptResult = openSaleReceiptPrint(savedSale, medicineById);
-      if (!receiptResult.ok) {
-        setError(receiptResult.message);
-      }
+      setLastCommittedSale(savedSale);
 
       setCustomerName("");
       setMedicineId("");
@@ -72,9 +89,10 @@ export default function SalesPage() {
       "seller_name",
       "seller_username",
       "sold_at",
+      (row) => getSaleItemsText(row),
       (row) => row.total_amount,
     ]);
-  }, [sales, query]);
+  }, [sales, query, medicineById]);
 
   const { pageItems, pageCount, page: safePage, total } = paginate(filtered, page, pageSize);
 
@@ -83,6 +101,7 @@ export default function SalesPage() {
       { header: "Sale ID", accessor: (row) => row.sale_code || `#${row.id}` },
       { header: "Seller", accessor: (row) => row.seller_name || row.seller_username || "-" },
       { header: "Customer", accessor: "customer_name" },
+      { header: "Items", accessor: (row) => getSaleItemsText(row) },
       { header: "Total", accessor: (row) => formatEtbPlain(row.total_amount) },
       { header: "Sold At", accessor: "sold_at" },
     ];
@@ -121,6 +140,44 @@ export default function SalesPage() {
         />
         <button className="w-full rounded-lg bg-brand-700 px-3 py-2 font-medium text-white">Save Sale</button>
         {error ? <p className="text-xs text-rose-600">{error}</p> : null}
+        {lastCommittedSale ? (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-slate-700">
+            <p className="font-semibold text-emerald-700">Sale committed: {lastCommittedSale.sale_code || `#${lastCommittedSale.id}`}</p>
+            <p className="mt-1">Customer: {lastCommittedSale.customer_name || "Walk-in customer"}</p>
+            <div className="mt-2 overflow-hidden rounded border border-emerald-100 bg-white">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500">
+                  <tr>
+                    <th className="px-2 py-1">Item</th>
+                    <th className="px-2 py-1">Qty</th>
+                    <th className="px-2 py-1">Price</th>
+                    <th className="px-2 py-1">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(lastCommittedSale.items || []).map((item) => (
+                    <tr key={item.id} className="border-t">
+                      <td className="px-2 py-1">{medicineById.get(item.medicine_id) || `Medicine #${item.medicine_id}`}</td>
+                      <td className="px-2 py-1">{item.quantity}</td>
+                      <td className="px-2 py-1">{formatEtbPlain(item.unit_price)}</td>
+                      <td className="px-2 py-1">{formatEtbPlain(item.line_total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-2 flex items-center justify-between">
+              <p className="font-semibold">Total: {formatEtbPlain(lastCommittedSale.total_amount)}</p>
+              <button
+                type="button"
+                onClick={() => printSaleReceipt(lastCommittedSale)}
+                className="rounded border border-emerald-200 bg-white px-3 py-1 font-medium text-emerald-700 hover:bg-emerald-100"
+              >
+                Print Receipt
+              </button>
+            </div>
+          </div>
+        ) : null}
       </form>
 
       <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
@@ -166,14 +223,16 @@ export default function SalesPage() {
                 <th className="px-3 py-2">Sale ID</th>
                 <th className="px-3 py-2">Seller</th>
                 <th className="px-3 py-2">Customer</th>
+                <th className="px-3 py-2">Sold Items</th>
                 <th className="px-3 py-2">Total (ETB)</th>
                 <th className="px-3 py-2">Sold At</th>
+                <th className="px-3 py-2">Receipt</th>
               </tr>
             </thead>
             <tbody>
               {pageItems.length === 0 ? (
                 <tr>
-                  <td className="px-3 py-4 text-slate-500" colSpan={5}>
+                  <td className="px-3 py-4 text-slate-500" colSpan={7}>
                     No sales found.
                   </td>
                 </tr>
@@ -183,8 +242,18 @@ export default function SalesPage() {
                     <td className="px-3 py-2 font-medium text-slate-800">{sale.sale_code || `#${sale.id}`}</td>
                     <td className="px-3 py-2 text-slate-600">{sale.seller_name || sale.seller_username || "-"}</td>
                     <td className="px-3 py-2 text-slate-600">{sale.customer_name || "Walk-in customer"}</td>
+                    <td className="px-3 py-2 text-slate-600">{getSaleItemsText(sale)}</td>
                     <td className="px-3 py-2 text-slate-600">{formatEtbPlain(sale.total_amount)}</td>
                     <td className="px-3 py-2 text-slate-500">{new Date(sale.sold_at).toLocaleString()}</td>
+                    <td className="px-3 py-2">
+                      <button
+                        type="button"
+                        onClick={() => printSaleReceipt(sale)}
+                        className="rounded border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                      >
+                        Print
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
