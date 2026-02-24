@@ -16,6 +16,12 @@ class PurchaseCreate(BaseModel):
     items: list[PurchaseItemCreate]
 
 
+class PurchaseUpdate(BaseModel):
+    supplier_id: int | None = None
+    invoice_number: str | None = None
+    note: str | None = None
+
+
 class PurchaseItemRead(BaseModel):
     id: int
     medicine_id: int

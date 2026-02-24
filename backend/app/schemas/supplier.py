@@ -11,6 +11,10 @@ class SupplierCreate(SupplierBase):
     pass
 
 
+class SupplierUpdate(SupplierBase):
+    pass
+
+
 class SupplierRead(SupplierBase):
     id: int
 

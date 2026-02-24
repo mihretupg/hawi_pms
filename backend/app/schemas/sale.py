@@ -23,6 +23,10 @@ class SaleCreate(BaseModel):
     items: list[SaleItemCreate]
 
 
+class SaleUpdate(BaseModel):
+    customer_name: str | None = None
+
+
 class SaleRead(BaseModel):
     id: int
     sale_code: str

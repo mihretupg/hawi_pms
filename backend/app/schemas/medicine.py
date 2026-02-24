@@ -17,6 +17,10 @@ class MedicineCreate(MedicineBase):
     pass
 
 
+class MedicineUpdate(MedicineBase):
+    pass
+
+
 class MedicineRead(MedicineBase):
     id: int
 

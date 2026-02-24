@@ -1,12 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
 from app.core.rbac import require_roles
 from app.models.medicine import Medicine
 from app.models.purchase import Purchase
 from app.models.purchase_item import PurchaseItem
-from app.schemas.purchase import PurchaseCreate, PurchaseRead
+from app.schemas.purchase import PurchaseCreate, PurchaseRead, PurchaseUpdate
 
 router = APIRouter(prefix="/purchases", tags=["purchases"])
 
@@ -17,7 +17,19 @@ router = APIRouter(prefix="/purchases", tags=["purchases"])
     dependencies=[Depends(require_roles(["Admin", "Pharmacist", "Inventory"]))],
 )
 def list_purchases(db: Session = Depends(get_db)):
-    return db.query(Purchase).order_by(Purchase.purchased_at.desc()).all()
+    return db.query(Purchase).options(joinedload(Purchase.items)).order_by(Purchase.purchased_at.desc()).all()
+
+
+@router.get(
+    "/{purchase_id}",
+    response_model=PurchaseRead,
+    dependencies=[Depends(require_roles(["Admin", "Pharmacist", "Inventory"]))],
+)
+def get_purchase(purchase_id: int, db: Session = Depends(get_db)):
+    purchase = db.query(Purchase).options(joinedload(Purchase.items)).filter(Purchase.id == purchase_id).first()
+    if not purchase:
+        raise HTTPException(status_code=404, detail="Purchase not found")
+    return purchase
 
 
 @router.post(
@@ -63,3 +75,50 @@ def create_purchase(payload: PurchaseCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(purchase)
     return purchase
+
+
+@router.patch(
+    "/{purchase_id}",
+    response_model=PurchaseRead,
+    dependencies=[Depends(require_roles(["Admin", "Pharmacist", "Inventory"]))],
+)
+def update_purchase(purchase_id: int, payload: PurchaseUpdate, db: Session = Depends(get_db)):
+    purchase = db.query(Purchase).options(joinedload(Purchase.items)).filter(Purchase.id == purchase_id).first()
+    if not purchase:
+        raise HTTPException(status_code=404, detail="Purchase not found")
+
+    purchase.supplier_id = payload.supplier_id
+    purchase.invoice_number = payload.invoice_number
+    purchase.note = payload.note
+    db.commit()
+    db.refresh(purchase)
+    return purchase
+
+
+@router.delete(
+    "/{purchase_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles(["Admin", "Pharmacist", "Inventory"]))],
+)
+def delete_purchase(purchase_id: int, db: Session = Depends(get_db)):
+    purchase = db.query(Purchase).options(joinedload(Purchase.items)).filter(Purchase.id == purchase_id).first()
+    if not purchase:
+        raise HTTPException(status_code=404, detail="Purchase not found")
+
+    for item in purchase.items:
+        medicine = db.get(Medicine, item.medicine_id)
+        if not medicine:
+            raise HTTPException(status_code=400, detail=f"Medicine {item.medicine_id} not found")
+        if medicine.stock_qty < item.quantity:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot delete purchase; stock for {medicine.name} is lower than purchased quantity",
+            )
+
+    for item in purchase.items:
+        medicine = db.get(Medicine, item.medicine_id)
+        medicine.stock_qty -= item.quantity
+
+    db.delete(purchase)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

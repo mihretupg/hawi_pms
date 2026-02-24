@@ -28,5 +28,6 @@ class Sale(Base):
 
     @property
     def sale_code(self) -> str:
-        stamp = (self.sold_at or datetime.utcnow()).strftime("%A-%d-%B-%Y")
-        return f"SALE-{self.id}-{stamp}"
+        stamp = (self.sold_at or datetime.utcnow()).strftime("%m%d%Y")
+        sequence = max((self.id or 1) - 1, 0)
+        return f"{sequence:02d}{stamp}"

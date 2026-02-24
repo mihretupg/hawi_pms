@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
@@ -7,7 +7,7 @@ from app.models.medicine import Medicine
 from app.models.sale import Sale
 from app.models.sale_item import SaleItem
 from app.models.user import User
-from app.schemas.sale import SaleCreate, SaleRead
+from app.schemas.sale import SaleCreate, SaleRead, SaleUpdate
 
 router = APIRouter(prefix="/sales", tags=["sales"])
 
@@ -24,6 +24,18 @@ def list_sales(db: Session = Depends(get_db)):
         .order_by(Sale.sold_at.desc())
         .all()
     )
+
+
+@router.get(
+    "/{sale_id}",
+    response_model=SaleRead,
+    dependencies=[Depends(require_roles(["Admin", "Cashier", "Pharmacist"]))],
+)
+def get_sale(sale_id: int, db: Session = Depends(get_db)):
+    sale = db.query(Sale).options(joinedload(Sale.seller), joinedload(Sale.items)).filter(Sale.id == sale_id).first()
+    if not sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+    return sale
 
 
 @router.post(
@@ -68,3 +80,40 @@ def create_sale(
     db.commit()
     db.refresh(sale)
     return sale
+
+
+@router.patch(
+    "/{sale_id}",
+    response_model=SaleRead,
+    dependencies=[Depends(require_roles(["Admin", "Cashier", "Pharmacist"]))],
+)
+def update_sale(sale_id: int, payload: SaleUpdate, db: Session = Depends(get_db)):
+    sale = db.query(Sale).options(joinedload(Sale.seller), joinedload(Sale.items)).filter(Sale.id == sale_id).first()
+    if not sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+
+    sale.customer_name = payload.customer_name
+    db.commit()
+    db.refresh(sale)
+    return sale
+
+
+@router.delete(
+    "/{sale_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles(["Admin"]))],
+)
+def delete_sale(sale_id: int, db: Session = Depends(get_db)):
+    sale = db.query(Sale).options(joinedload(Sale.items)).filter(Sale.id == sale_id).first()
+    if not sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+
+    for item in sale.items:
+        medicine = db.get(Medicine, item.medicine_id)
+        if not medicine:
+            raise HTTPException(status_code=400, detail=f"Medicine {item.medicine_id} not found")
+        medicine.stock_qty += item.quantity
+
+    db.delete(sale)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
