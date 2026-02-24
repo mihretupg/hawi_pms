@@ -1,7 +1,7 @@
 const API_BASE =
   import.meta.env.VITE_API_BASE ||
   import.meta.env.VITE_API_URL ||
-  "http://127.0.0.1:8000/api";
+  "/api";
 
 function getStoredUser() {
   try {
@@ -22,10 +22,15 @@ async function request(path, options = {}) {
         }
       : {};
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...authHeaders },
-    ...options,
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      headers: { "Content-Type": "application/json", ...authHeaders },
+      ...options,
+    });
+  } catch {
+    throw new Error("Cannot reach API server. Verify backend is running and frontend was restarted.");
+  }
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
