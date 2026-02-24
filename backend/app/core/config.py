@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     default_admin_name: str = "Admin User"
     default_admin_email: str = "admin@hawi.com"
     default_admin_role: str = "Super Admin"
+    bootstrap_admin_users: str = "[]"
     default_user_password: str = "changeme123"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
