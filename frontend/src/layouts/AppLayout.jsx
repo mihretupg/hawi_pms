@@ -5,6 +5,7 @@ import { useAuth } from "../auth/AuthContext";
 const navItems = [
   { label: "Dashboard", to: "/dashboard", roles: ["Super Admin", "Admin", "Pharmacist", "Inventory", "Cashier"] },
   { label: "Medicines", to: "/medicines", roles: ["Super Admin", "Admin", "Pharmacist", "Inventory", "Cashier"] },
+  { label: "Stock", to: "/stock", roles: ["Super Admin", "Admin", "Pharmacist", "Inventory", "Cashier"] },
   { label: "Purchases", to: "/purchases", roles: ["Super Admin", "Admin", "Pharmacist", "Inventory"] },
   { label: "Suppliers", to: "/suppliers", roles: ["Super Admin", "Admin", "Pharmacist", "Inventory", "Cashier"] },
   { label: "Sales", to: "/sales", roles: ["Super Admin", "Admin", "Pharmacist", "Cashier"] },

@@ -297,6 +297,9 @@ export default function DashboardPage() {
           <Link to="/medicines" className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-700/30 dark:text-slate-100 dark:hover:bg-slate-700/60">
             Restock Items
           </Link>
+          <Link to="/stock" className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-700/30 dark:text-slate-100 dark:hover:bg-slate-700/60">
+            Open Stock Module
+          </Link>
         </div>
       </section>
 

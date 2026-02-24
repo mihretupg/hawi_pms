@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import PurchasesPage from "./pages/PurchasesPage";
 import SalesPage from "./pages/SalesPage";
 import SettingsPage from "./pages/SettingsPage";
+import StockPage from "./pages/StockPage";
 import SuppliersPage from "./pages/SuppliersPage";
 import UsersPage from "./pages/UsersPage";
 
@@ -39,6 +40,14 @@ export default function App() {
           element={
             <RequireRole roles={["Super Admin", "Admin", "Pharmacist", "Inventory", "Cashier"]}>
               <MedicinesPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="stock"
+          element={
+            <RequireRole roles={["Super Admin", "Admin", "Pharmacist", "Inventory", "Cashier"]}>
+              <StockPage />
             </RequireRole>
           }
         />
