@@ -27,6 +27,9 @@ class SaleRead(BaseModel):
     id: int
     sold_at: datetime
     customer_name: str | None
+    user_id: int | None
+    seller_name: str | None
+    seller_username: str | None
     total_amount: float
     items: list[SaleItemRead]
 

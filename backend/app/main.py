@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import auth, dashboard, medicines, purchases, sales, suppliers, users
 from app.core.config import settings
 from app.core.database import Base, engine
+from app.core.schema_sync import ensure_runtime_schema
 from app.core.seed import ensure_default_admin
 
 app = FastAPI(title=settings.app_name)
@@ -20,6 +21,7 @@ app.add_middleware(
 @app.on_event("startup")
 def startup() -> None:
     Base.metadata.create_all(bind=engine)
+    ensure_runtime_schema()
     ensure_default_admin()
 
 

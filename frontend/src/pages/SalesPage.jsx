@@ -62,6 +62,8 @@ export default function SalesPage() {
     return filterByQuery(sales, query, [
       "id",
       "customer_name",
+      "seller_name",
+      "seller_username",
       "sold_at",
       (row) => row.total_amount,
     ]);
@@ -72,6 +74,7 @@ export default function SalesPage() {
   function exportCsv() {
     const columns = [
       { header: "Sale ID", accessor: "id" },
+      { header: "Seller", accessor: (row) => row.seller_name || row.seller_username || "-" },
       { header: "Customer", accessor: "customer_name" },
       { header: "Total", accessor: (row) => formatEtbPlain(row.total_amount) },
       { header: "Sold At", accessor: "sold_at" },
@@ -126,7 +129,7 @@ export default function SalesPage() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by customer or id"
+            placeholder="Search by seller, customer, or sale id"
             className="min-w-[220px] flex-1 rounded-lg border border-slate-300 px-3 py-2"
           />
           <select
@@ -154,6 +157,7 @@ export default function SalesPage() {
             <thead className="bg-slate-50 text-slate-500">
               <tr>
                 <th className="px-3 py-2">Sale ID</th>
+                <th className="px-3 py-2">Seller</th>
                 <th className="px-3 py-2">Customer</th>
                 <th className="px-3 py-2">Total (ETB)</th>
                 <th className="px-3 py-2">Sold At</th>
@@ -162,7 +166,7 @@ export default function SalesPage() {
             <tbody>
               {pageItems.length === 0 ? (
                 <tr>
-                  <td className="px-3 py-4 text-slate-500" colSpan={4}>
+                  <td className="px-3 py-4 text-slate-500" colSpan={5}>
                     No sales found.
                   </td>
                 </tr>
@@ -170,6 +174,7 @@ export default function SalesPage() {
                 pageItems.map((sale) => (
                   <tr key={sale.id} className="border-t">
                     <td className="px-3 py-2 font-medium text-slate-800">#{sale.id}</td>
+                    <td className="px-3 py-2 text-slate-600">{sale.seller_name || sale.seller_username || "-"}</td>
                     <td className="px-3 py-2 text-slate-600">{sale.customer_name || "Walk-in customer"}</td>
                     <td className="px-3 py-2 text-slate-600">{formatEtbPlain(sale.total_amount)}</td>
                     <td className="px-3 py-2 text-slate-500">{new Date(sale.sold_at).toLocaleString()}</td>

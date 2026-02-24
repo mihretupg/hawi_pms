@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
-from app.core.rbac import require_roles
+from app.core.rbac import get_current_user, require_roles
 from app.models.medicine import Medicine
 from app.models.sale import Sale
 from app.models.sale_item import SaleItem
+from app.models.user import User
 from app.schemas.sale import SaleCreate, SaleRead
 
 router = APIRouter(prefix="/sales", tags=["sales"])
@@ -17,7 +18,12 @@ router = APIRouter(prefix="/sales", tags=["sales"])
     dependencies=[Depends(require_roles(["Admin", "Cashier", "Pharmacist"]))],
 )
 def list_sales(db: Session = Depends(get_db)):
-    return db.query(Sale).order_by(Sale.sold_at.desc()).all()
+    return (
+        db.query(Sale)
+        .options(joinedload(Sale.seller), joinedload(Sale.items))
+        .order_by(Sale.sold_at.desc())
+        .all()
+    )
 
 
 @router.post(
@@ -26,11 +32,15 @@ def list_sales(db: Session = Depends(get_db)):
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_roles(["Admin", "Cashier", "Pharmacist"]))],
 )
-def create_sale(payload: SaleCreate, db: Session = Depends(get_db)):
+def create_sale(
+    payload: SaleCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     if not payload.items:
         raise HTTPException(status_code=400, detail="Sale must include at least one item")
 
-    sale = Sale(customer_name=payload.customer_name)
+    sale = Sale(customer_name=payload.customer_name, user_id=current_user.id)
     db.add(sale)
 
     total_amount = 0.0
