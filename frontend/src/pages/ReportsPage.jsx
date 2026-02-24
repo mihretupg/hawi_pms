@@ -1,18 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import { formatEtbPlain } from "../utils/format";
+import { openSaleReceiptPrint } from "../utils/receipt";
 import { filterByQuery, paginate } from "../utils/table";
 
 const pageSizes = [10, 25, 50];
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
 
 export default function ReportsPage() {
   const [sales, setSales] = useState([]);
@@ -49,6 +41,7 @@ export default function ReportsPage() {
     () =>
       filterByQuery(sales, query, [
         "id",
+        "sale_code",
         "customer_name",
         "seller_name",
         "seller_username",
@@ -61,90 +54,10 @@ export default function ReportsPage() {
   const { pageItems, pageCount, page: safePage, total } = paginate(filtered, page, pageSize);
 
   function printReceipt(sale) {
-    const itemsHtml = (sale.items || [])
-      .map((item) => {
-        const name = medicineById.get(item.medicine_id) || `Medicine #${item.medicine_id}`;
-        return `
-          <tr>
-            <td>${escapeHtml(name)}</td>
-            <td style="text-align:right;">${escapeHtml(item.quantity)}</td>
-            <td style="text-align:right;">${escapeHtml(formatEtbPlain(item.unit_price))}</td>
-            <td style="text-align:right;">${escapeHtml(formatEtbPlain(item.line_total))}</td>
-          </tr>
-        `;
-      })
-      .join("");
-
-    const soldAt = new Date(sale.sold_at).toLocaleString();
-    const seller = sale.seller_name || sale.seller_username || "Unknown";
-    const customer = sale.customer_name || "Walk-in customer";
-    const html = `
-      <!doctype html>
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <title>Receipt #${escapeHtml(sale.id)}</title>
-          <style>
-            body { font-family: Arial, sans-serif; color: #111; margin: 24px; }
-            .receipt { max-width: 700px; margin: 0 auto; border: 1px solid #ddd; padding: 16px; }
-            .header { margin-bottom: 12px; }
-            .header h1 { font-size: 18px; margin: 0 0 6px; }
-            .meta { font-size: 13px; line-height: 1.5; }
-            table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
-            th, td { border-bottom: 1px solid #eee; padding: 8px 4px; }
-            th { text-align: left; }
-            .total { margin-top: 14px; text-align: right; font-size: 15px; font-weight: 700; }
-            .footer { margin-top: 18px; font-size: 12px; color: #444; }
-            @media print {
-              body { margin: 0; }
-              .receipt { border: 0; max-width: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="receipt">
-            <div class="header">
-              <h1>Hawi Pharmacy - Sales Receipt</h1>
-              <div class="meta">
-                <div><strong>Receipt:</strong> #${escapeHtml(sale.id)}</div>
-                <div><strong>Date:</strong> ${escapeHtml(soldAt)}</div>
-                <div><strong>Seller:</strong> ${escapeHtml(seller)}</div>
-                <div><strong>Customer:</strong> ${escapeHtml(customer)}</div>
-              </div>
-            </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Medicine</th>
-                  <th style="text-align:right;">Qty</th>
-                  <th style="text-align:right;">Unit Price</th>
-                  <th style="text-align:right;">Line Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${itemsHtml}
-              </tbody>
-            </table>
-            <div class="total">Total: ${escapeHtml(formatEtbPlain(sale.total_amount))}</div>
-            <div class="footer">Thank you.</div>
-          </div>
-          <script>
-            window.onload = function () {
-              window.print();
-            };
-          </script>
-        </body>
-      </html>
-    `;
-
-    const printWindow = window.open("", "_blank", "width=900,height=900");
-    if (!printWindow) {
-      setError("Popup blocked. Allow popups to print receipt.");
-      return;
+    const result = openSaleReceiptPrint(sale, medicineById);
+    if (!result.ok) {
+      setError(result.message);
     }
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
   }
 
   return (
@@ -201,7 +114,7 @@ export default function ReportsPage() {
             ) : (
               pageItems.map((sale) => (
                 <tr key={sale.id} className="border-t">
-                  <td className="px-3 py-2 font-medium text-slate-800">#{sale.id}</td>
+                  <td className="px-3 py-2 font-medium text-slate-800">{sale.sale_code || `#${sale.id}`}</td>
                   <td className="px-3 py-2 text-slate-600">{new Date(sale.sold_at).toLocaleString()}</td>
                   <td className="px-3 py-2 text-slate-600">{sale.seller_name || sale.seller_username || "-"}</td>
                   <td className="px-3 py-2 text-slate-600">{sale.customer_name || "Walk-in customer"}</td>

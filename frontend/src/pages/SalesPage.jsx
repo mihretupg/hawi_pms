@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import { formatEtbPlain } from "../utils/format";
+import { openSaleReceiptPrint } from "../utils/receipt";
 import { buildCsv, downloadCsv, filterByQuery, paginate } from "../utils/table";
 
 const pageSizes = [10, 25, 50];
@@ -43,10 +44,15 @@ export default function SalesPage() {
   async function onSubmit(e) {
     e.preventDefault();
     try {
-      await api.createSale({
+      const savedSale = await api.createSale({
         customer_name: customerName || null,
         items: [{ medicine_id: Number(medicineId), quantity: Number(quantity) }],
       });
+      const medicineById = new Map(medicines.map((medicine) => [medicine.id, medicine.name]));
+      const receiptResult = openSaleReceiptPrint(savedSale, medicineById);
+      if (!receiptResult.ok) {
+        setError(receiptResult.message);
+      }
 
       setCustomerName("");
       setMedicineId("");
@@ -61,6 +67,7 @@ export default function SalesPage() {
   const filtered = useMemo(() => {
     return filterByQuery(sales, query, [
       "id",
+      "sale_code",
       "customer_name",
       "seller_name",
       "seller_username",
@@ -73,7 +80,7 @@ export default function SalesPage() {
 
   function exportCsv() {
     const columns = [
-      { header: "Sale ID", accessor: "id" },
+      { header: "Sale ID", accessor: (row) => row.sale_code || `#${row.id}` },
       { header: "Seller", accessor: (row) => row.seller_name || row.seller_username || "-" },
       { header: "Customer", accessor: "customer_name" },
       { header: "Total", accessor: (row) => formatEtbPlain(row.total_amount) },
@@ -173,7 +180,7 @@ export default function SalesPage() {
               ) : (
                 pageItems.map((sale) => (
                   <tr key={sale.id} className="border-t">
-                    <td className="px-3 py-2 font-medium text-slate-800">#{sale.id}</td>
+                    <td className="px-3 py-2 font-medium text-slate-800">{sale.sale_code || `#${sale.id}`}</td>
                     <td className="px-3 py-2 text-slate-600">{sale.seller_name || sale.seller_username || "-"}</td>
                     <td className="px-3 py-2 text-slate-600">{sale.customer_name || "Walk-in customer"}</td>
                     <td className="px-3 py-2 text-slate-600">{formatEtbPlain(sale.total_amount)}</td>

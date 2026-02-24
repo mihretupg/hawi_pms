@@ -25,6 +25,7 @@ class SaleCreate(BaseModel):
 
 class SaleRead(BaseModel):
     id: int
+    sale_code: str
     sold_at: datetime
     customer_name: str | None
     user_id: int | None

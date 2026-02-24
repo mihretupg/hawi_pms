@@ -25,3 +25,8 @@ class Sale(Base):
     @property
     def seller_username(self) -> str | None:
         return self.seller.username if self.seller else None
+
+    @property
+    def sale_code(self) -> str:
+        stamp = (self.sold_at or datetime.utcnow()).strftime("%A-%d-%B-%Y")
+        return f"SALE-{self.id}-{stamp}"
